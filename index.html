@@ -613,7 +613,7 @@
 
       let hasShattered = false;
 
-      // 1. 数字の減算および消滅・フリップアニメーション適用
+      // 1. デクリメント処理（その場で数値を減らす・1は消滅）
       cross.forEach(([tr, tc]) => {
         if (tr >= 0 && tr < grid.length && tc >= 0 && tc < COLS && grid[tr][tc] !== null) {
           const tileEl = boardEl.querySelector(`.tile[data-r="${tr}"][data-c="${tc}"]`);
@@ -647,18 +647,23 @@
 
       const waitTime = hasShattered ? 320 : 150;
 
-      // 2. 消滅演出（320ms）完了を待ってからDOM再描画 ➔ 落下処理を実行
+      // 2. 消滅アニメーション待ち後、★落ちる前★の揃いチェックを実行
       setTimeout(() => {
         renderBoard();
 
-        applyGravity(() => {
-          checkMatchesAndCascade(1, () => {
-            isProcessing = false;
-            if (moves <= 0 && !isClearingLevel) {
-              valFinalLevel.textContent = level;
-              overlayGameOver.classList.remove('hidden');
-              overlayGameOver.classList.add('flex');
-            }
+        // 落ちる前の揃いチェック (1回目のMatch-3)
+        checkMatchesAndCascade(1, () => {
+          // 3. 落ちる前の揃いがすべて消滅・処理された後に★重力（落下）★を適用
+          applyGravity(() => {
+            // 4. ★落ちた後★に再度揃いチェックを実行 (2回目以降のMatch-3・連鎖)
+            checkMatchesAndCascade(1, () => {
+              isProcessing = false;
+              if (moves <= 0 && !isClearingLevel) {
+                valFinalLevel.textContent = level;
+                overlayGameOver.classList.remove('hidden');
+                overlayGameOver.classList.add('flex');
+              }
+            });
           });
         });
       }, waitTime);
@@ -672,7 +677,6 @@
       prevPanelCount = current;
     }
 
-    // 重力適用（視覚アニメーション付き）
     function applyGravity(onComplete = null) {
       const rows = grid.length;
       let movesList = [];
@@ -720,6 +724,7 @@
       }
     }
 
+    // 3つ以上揃っているパネルを検出して処理する関数（連鎖対応）
     function checkMatchesAndCascade(chainCount = 1, onComplete = null) {
       if (isClearingLevel) {
         if (onComplete) onComplete();
