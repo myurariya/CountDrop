@@ -51,8 +51,8 @@
       border-radius: 8px;
       pointer-events: none;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
       perspective: 600px;
+      z-index: 5;
     }
 
     .tile-inner {
@@ -67,6 +67,10 @@
       transform: rotateX(-180deg);
     }
 
+    .tile-falling {
+      transition: transform 0.25s cubic-bezier(0.55, 0, 0.1, 1);
+    }
+
     .slot-hover-cross {
       border-color: rgba(255, 255, 255, 0.6) !important;
       background-color: rgba(255, 255, 255, 0.12) !important;
@@ -79,14 +83,14 @@
     }
 
     .tile-disappearing {
-      animation: shrinkAndFade 0.4s ease-out forwards;
+      animation: shrinkAndFade 0.3s ease-out forwards;
       pointer-events: none !important;
       z-index: 20;
     }
 
     @keyframes shrinkAndFade {
       0% { transform: scale(1); opacity: 1; filter: brightness(1.5); }
-      100% { transform: scale(0.2); opacity: 0; filter: brightness(2); }
+      100% { transform: scale(0.1); opacity: 0; filter: brightness(2); }
     }
 
     .shatter-piece {
@@ -94,7 +98,7 @@
       pointer-events: none;
       border-radius: 2px;
       z-index: 40;
-      animation: shatterFly 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+      animation: shatterFly 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
 
     @keyframes shatterFly {
@@ -188,21 +192,11 @@
     }
 
     @keyframes dangerPulse {
-      0%, 70%, 100% {
-        transform: scale(1) rotate(0deg);
-      }
-      75% {
-        transform: scale(1.1) rotate(-4deg);
-      }
-      80% {
-        transform: scale(1.1) rotate(4deg);
-      }
-      85% {
-        transform: scale(1.1) rotate(-3deg);
-      }
-      90% {
-        transform: scale(1.05) rotate(2deg);
-      }
+      0%, 70%, 100% { transform: scale(1) rotate(0deg); }
+      75% { transform: scale(1.1) rotate(-4deg); }
+      80% { transform: scale(1.1) rotate(4deg); }
+      85% { transform: scale(1.1) rotate(-3deg); }
+      90% { transform: scale(1.05) rotate(2deg); }
     }
   </style>
 </head>
@@ -261,7 +255,6 @@
   <div id="overlay-gameover" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex-col items-center justify-center p-6 z-50">
     <div class="text-4xl font-bold text-red-500 mb-2">GAME OVER</div>
     
-    <!-- 到達レベル表示を追加 -->
     <div class="bg-gray-800/80 border border-gray-700 rounded-xl px-6 py-3 my-4 text-center">
       <div class="text-xs tracking-widest text-gray-400 uppercase mb-0.5">REACHED LEVEL</div>
       <div id="val-final-level" class="text-3xl font-extrabold text-cyan-400">1</div>
@@ -297,6 +290,7 @@
     let prevPanelCount = 0;
     let accumulatedDebris = 0;
     let isClearingLevel = false;
+    let isProcessing = false;
     const COLS = 6;
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -438,6 +432,7 @@
       moves = 20;
       accumulatedDebris = 0;
       isClearingLevel = false;
+      isProcessing = false;
       bgPileLayer.innerHTML = '';
       initLevel();
     }
@@ -452,6 +447,7 @@
 
     function initLevel() {
       isClearingLevel = false;
+      isProcessing = false;
       const totalPanels = 10 + 2 * level;
       const rows = Math.max(6, Math.ceil(totalPanels / COLS));
       grid = Array.from({ length: rows }, () => Array(COLS).fill(null));
@@ -584,7 +580,7 @@
     }
 
     function highlightCross(r, c, active) {
-      if (isClearingLevel) return;
+      if (isClearingLevel || isProcessing) return;
       const targets = [[r,c], [r-1,c], [r+1,c], [r,c-1], [r,c+1]];
       targets.forEach(([tr, tc]) => {
         if (tr >= 0 && tr < grid.length && tc >= 0 && tc < COLS) {
@@ -598,14 +594,26 @@
     }
 
     function handleSlotClick(r, c) {
-      if (moves <= 0 || isClearingLevel) return;
+      if (moves <= 0 || isClearingLevel || isProcessing) return;
 
+      const cross = [[r,c], [r-1,c], [r+1,c], [r,c-1], [r,c+1]];
+      
+      let affectedCount = 0;
+      cross.forEach(([tr, tc]) => {
+        if (tr >= 0 && tr < grid.length && tc >= 0 && tc < COLS && grid[tr][tc] !== null) {
+          affectedCount++;
+        }
+      });
+
+      if (affectedCount === 0) return;
+
+      isProcessing = true;
       moves--;
       playSound(400, 'sine', 0.08);
 
-      const cross = [[r,c], [r-1,c], [r+1,c], [r,c-1], [r,c+1]];
-      let shattered = [];
+      let hasShattered = false;
 
+      // 1. 数字の減算および消滅・フリップアニメーション適用
       cross.forEach(([tr, tc]) => {
         if (tr >= 0 && tr < grid.length && tc >= 0 && tc < COLS && grid[tr][tc] !== null) {
           const tileEl = boardEl.querySelector(`.tile[data-r="${tr}"][data-c="${tc}"]`);
@@ -614,7 +622,11 @@
 
           if (newVal <= 0) {
             grid[tr][tc] = null;
-            if (tileEl) shattered.push({ el: tileEl, val: val });
+            hasShattered = true;
+            if (tileEl) {
+              tileEl.classList.add('tile-disappearing');
+              shatterAndAccumulateDebris(tileEl, val);
+            }
           } else {
             grid[tr][tc] = newVal;
             if (tileEl) {
@@ -630,20 +642,26 @@
         }
       });
 
-      shattered.forEach(item => shatterAndAccumulateDebris(item.el, item.val));
-      
       checkPanelDecreaseGlow();
       updateUI();
-      applyGravity();
-      checkMatchesAndCascade(1);
 
-      if (moves <= 0 && !isClearingLevel) {
-        setTimeout(() => {
-          valFinalLevel.textContent = level; // ゲームオーバー時に到達レベルを設定
-          overlayGameOver.classList.remove('hidden');
-          overlayGameOver.classList.add('flex');
-        }, 600);
-      }
+      const waitTime = hasShattered ? 320 : 150;
+
+      // 2. 消滅演出（320ms）完了を待ってからDOM再描画 ➔ 落下処理を実行
+      setTimeout(() => {
+        renderBoard();
+
+        applyGravity(() => {
+          checkMatchesAndCascade(1, () => {
+            isProcessing = false;
+            if (moves <= 0 && !isClearingLevel) {
+              valFinalLevel.textContent = level;
+              overlayGameOver.classList.remove('hidden');
+              overlayGameOver.classList.add('flex');
+            }
+          });
+        });
+      }, waitTime);
     }
 
     function checkPanelDecreaseGlow() {
@@ -654,13 +672,22 @@
       prevPanelCount = current;
     }
 
-    function applyGravity() {
+    // 重力適用（視覚アニメーション付き）
+    function applyGravity(onComplete = null) {
       const rows = grid.length;
+      let movesList = [];
+
       for (let c = 0; c < COLS; c++) {
         let emptyRow = rows - 1;
         for (let r = rows - 1; r >= 0; r--) {
           if (grid[r][c] !== null) {
             if (r !== emptyRow) {
+              movesList.push({
+                fromR: r,
+                toR: emptyRow,
+                col: c,
+                val: grid[r][c]
+              });
               grid[emptyRow][c] = grid[r][c];
               grid[r][c] = null;
             }
@@ -668,12 +695,36 @@
           }
         }
       }
-      renderBoard();
-      checkLevelClear();
+
+      if (movesList.length > 0) {
+        const slotHeight = boardEl.querySelector('.tile-slot').getBoundingClientRect().height + 6;
+
+        movesList.forEach(m => {
+          const tileEl = boardEl.querySelector(`.tile[data-r="${m.fromR}"][data-c="${m.col}"]`);
+          if (tileEl) {
+            const deltaY = (m.toR - m.fromR) * slotHeight;
+            tileEl.classList.add('tile-falling');
+            tileEl.style.transform = `translateY(${deltaY}px)`;
+          }
+        });
+
+        setTimeout(() => {
+          renderBoard();
+          checkLevelClear();
+          if (onComplete) onComplete();
+        }, 250);
+      } else {
+        renderBoard();
+        checkLevelClear();
+        if (onComplete) onComplete();
+      }
     }
 
-    function checkMatchesAndCascade(chainCount = 1) {
-      if (isClearingLevel) return;
+    function checkMatchesAndCascade(chainCount = 1, onComplete = null) {
+      if (isClearingLevel) {
+        if (onComplete) onComplete();
+        return;
+      }
       const rows = grid.length;
       let matched = new Set();
 
@@ -752,9 +803,13 @@
         updateUI();
 
         setTimeout(() => {
-          applyGravity();
-          checkMatchesAndCascade(chainCount + 1);
-        }, 500);
+          renderBoard();
+          applyGravity(() => {
+            checkMatchesAndCascade(chainCount + 1, onComplete);
+          });
+        }, 320);
+      } else {
+        if (onComplete) onComplete();
       }
     }
 
@@ -762,7 +817,7 @@
       if (isClearingLevel) return;
       let remaining = getPanelCount();
       
-      if (remaining <= 8) {
+      if (remaining <= 5) {
         isClearingLevel = true;
         
         playLevelClearSound();
@@ -822,7 +877,7 @@
         p.style.setProperty('--rot', `${(Math.random() - 0.5) * 360}deg`);
 
         fxLayer.appendChild(p);
-        setTimeout(() => p.remove(), 500);
+        setTimeout(() => p.remove(), 400);
       }
 
       for (let i = 0; i < 3; i++) {
