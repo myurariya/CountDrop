@@ -260,6 +260,13 @@
   <!-- GAME OVER OVERLAY -->
   <div id="overlay-gameover" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex-col items-center justify-center p-6 z-50">
     <div class="text-4xl font-bold text-red-500 mb-2">GAME OVER</div>
+    
+    <!-- 到達レベル表示を追加 -->
+    <div class="bg-gray-800/80 border border-gray-700 rounded-xl px-6 py-3 my-4 text-center">
+      <div class="text-xs tracking-widest text-gray-400 uppercase mb-0.5">REACHED LEVEL</div>
+      <div id="val-final-level" class="text-3xl font-extrabold text-cyan-400">1</div>
+    </div>
+
     <p class="text-gray-400 text-sm mb-6">OUT OF MOVES</p>
     <button id="btn-restart" class="px-8 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 active:scale-95 transition">
       TRY AGAIN
@@ -338,11 +345,9 @@
       });
     }
 
-    // 爽やかで余韻のある3音（低・中・高）のレベルクリアサウンド
     function playLevelClearSound() {
       if (audioCtx.state === 'suspended') audioCtx.resume();
-      
-      const clearNotes = [523.25, 783.99, 1046.50]; // C5 -> G5 -> C6
+      const clearNotes = [523.25, 783.99, 1046.50];
 
       clearNotes.forEach((freq, idx) => {
         setTimeout(() => {
@@ -382,6 +387,7 @@
     const valLevel = document.getElementById('val-level');
     const valMoves = document.getElementById('val-moves');
     const valPanels = document.getElementById('val-panels');
+    const valFinalLevel = document.getElementById('val-final-level');
     const badgeLevel = document.getElementById('badge-level');
     const badgeMoves = document.getElementById('badge-moves');
     const badgePanels = document.getElementById('badge-panels');
@@ -633,6 +639,7 @@
 
       if (moves <= 0 && !isClearingLevel) {
         setTimeout(() => {
+          valFinalLevel.textContent = level; // ゲームオーバー時に到達レベルを設定
           overlayGameOver.classList.remove('hidden');
           overlayGameOver.classList.add('flex');
         }, 600);
