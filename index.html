@@ -207,8 +207,13 @@
     <h1 class="text-5xl font-bold tracking-wider mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-pink-500">
       COUNT DROP
     </h1>
-    <p class="text-xs tracking-widest text-gray-400 uppercase mb-10">Minimal Puzzle Challenge</p>
+    <p class="text-xs tracking-widest text-gray-400 uppercase mb-6">Minimal Puzzle Challenge</p>
     
+    <div class="bg-gray-800/60 border border-gray-700/60 rounded-xl px-5 py-2.5 mb-8 inline-block">
+      <span class="text-xs text-gray-400 uppercase tracking-wider mr-2">BEST LEVEL</span>
+      <span id="val-title-max-level" class="text-xl font-bold text-amber-400">1</span>
+    </div>
+
     <button id="btn-start" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold tracking-wider rounded-xl shadow-lg shadow-indigo-600/30 transition duration-150">
       START GAME
     </button>
@@ -218,27 +223,31 @@
   <div id="screen-game" class="hidden flex-col items-center w-full max-w-md">
     
     <!-- HEADER STATS -->
-    <div class="flex items-center justify-between w-full mb-4 px-2">
-      <div class="flex gap-4">
-        <div id="badge-level" class="relative bg-gray-800/80 border border-gray-700/50 rounded-lg px-3 py-1.5 text-center transition">
-          <div class="text-[10px] tracking-wider text-gray-400 uppercase">LEVEL</div>
-          <div id="val-level" class="text-xl font-bold text-cyan-400">1</div>
+    <div class="flex items-center justify-between w-full mb-4 px-1">
+      <div class="flex gap-2.5">
+        <div id="badge-level" class="relative bg-gray-800/80 border border-gray-700/50 rounded-lg px-2.5 py-1.5 text-center transition">
+          <div class="text-[9px] tracking-wider text-gray-400 uppercase">LEVEL</div>
+          <div id="val-level" class="text-lg font-bold text-cyan-400">1</div>
         </div>
-        <div id="badge-moves" class="relative bg-gray-800/80 border border-gray-700/50 rounded-lg px-3 py-1.5 text-center transition">
-          <div class="text-[10px] tracking-wider text-gray-400 uppercase">MOVES</div>
-          <div id="val-moves" class="text-xl font-bold text-amber-400">20</div>
+        <div id="badge-max-level" class="relative bg-gray-800/80 border border-gray-700/50 rounded-lg px-2.5 py-1.5 text-center transition">
+          <div class="text-[9px] tracking-wider text-gray-400 uppercase">BEST</div>
+          <div id="val-max-level" class="text-lg font-bold text-emerald-400">1</div>
         </div>
-        <div id="badge-panels" class="relative bg-gray-800/80 border border-gray-700/50 rounded-lg px-3 py-1.5 text-center transition">
-          <div class="text-[10px] tracking-wider text-gray-400 uppercase">PANELS</div>
-          <div id="val-panels" class="text-xl font-bold text-pink-400">12</div>
+        <div id="badge-moves" class="relative bg-gray-800/80 border border-gray-700/50 rounded-lg px-2.5 py-1.5 text-center transition">
+          <div class="text-[9px] tracking-wider text-gray-400 uppercase">MOVES</div>
+          <div id="val-moves" class="text-lg font-bold text-amber-400">20</div>
+        </div>
+        <div id="badge-panels" class="relative bg-gray-800/80 border border-gray-700/50 rounded-lg px-2.5 py-1.5 text-center transition">
+          <div class="text-[9px] tracking-wider text-gray-400 uppercase">PANELS</div>
+          <div id="val-panels" class="text-lg font-bold text-pink-400">12</div>
         </div>
       </div>
 
       <!-- TITLE HOLD BUTTON -->
-      <button id="btn-hold-title" class="relative overflow-hidden bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 transition active:scale-95 select-none">
+      <button id="btn-hold-title" class="relative overflow-hidden bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 text-xs font-semibold px-2.5 py-2 rounded-lg flex items-center gap-1 transition active:scale-95 select-none shrink-0">
         <div id="hold-progress" class="absolute inset-0 bg-red-600/40 w-0 transition-none pointer-events-none"></div>
         <span class="relative z-10">TITLE</span>
-        <span class="relative z-10 text-[9px] text-gray-500">(HOLD)</span>
+        <span class="relative z-10 text-[8px] text-gray-500">(HOLD)</span>
       </button>
     </div>
 
@@ -255,12 +264,13 @@
   <div id="overlay-gameover" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md flex-col items-center justify-center p-6 z-50">
     <div class="text-4xl font-bold text-red-500 mb-2">GAME OVER</div>
     
-    <div class="bg-gray-800/80 border border-gray-700 rounded-xl px-6 py-3 my-4 text-center">
+    <div class="bg-gray-800/80 border border-gray-700 rounded-xl px-6 py-3 my-2 text-center">
       <div class="text-xs tracking-widest text-gray-400 uppercase mb-0.5">REACHED LEVEL</div>
       <div id="val-final-level" class="text-3xl font-extrabold text-cyan-400">1</div>
     </div>
 
-    <p class="text-gray-400 text-sm mb-6">OUT OF MOVES</p>
+    <div class="text-sm text-gray-300 mb-6">BEST LEVEL: <span id="val-gameover-max-level" class="font-bold text-amber-400">1</span></div>
+
     <button id="btn-restart" class="px-8 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 active:scale-95 transition">
       TRY AGAIN
     </button>
@@ -285,6 +295,7 @@
     };
 
     let level = 1;
+    let maxLevel = 1;
     let moves = 20;
     let grid = [];
     let prevPanelCount = 0;
@@ -292,6 +303,34 @@
     let isClearingLevel = false;
     let isProcessing = false;
     const COLS = 6;
+
+    // ----- Cookieから localStorageへ変更 -----
+    function loadMaxLevel() {
+      // localStorage からデータを取得
+      const saved = localStorage.getItem('countdrop_max_level');
+      if (saved !== null) {
+        maxLevel = parseInt(saved, 10) || 1;
+      } else {
+        maxLevel = 1;
+      }
+      updateMaxLevelDisplay();
+    }
+
+    function saveMaxLevel(currentLevel) {
+      if (currentLevel > maxLevel) {
+        maxLevel = currentLevel;
+        // localStorage にデータを保存
+        localStorage.setItem('countdrop_max_level', maxLevel);
+        updateMaxLevelDisplay();
+      }
+    }
+    // ----------------------------------------
+
+    function updateMaxLevelDisplay() {
+      document.getElementById('val-title-max-level').textContent = maxLevel;
+      document.getElementById('val-max-level').textContent = maxLevel;
+      document.getElementById('val-gameover-max-level').textContent = maxLevel;
+    }
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -413,6 +452,7 @@
         screenGame.classList.add('hidden');
         screenGame.classList.remove('flex');
         screenTitle.classList.remove('hidden');
+        updateMaxLevelDisplay();
       }, 1200);
     }
 
@@ -427,6 +467,9 @@
     window.addEventListener('mouseup', resetHold);
     window.addEventListener('touchend', resetHold);
 
+    // 初回起動時のロード
+    loadMaxLevel();
+
     function startGame() {
       level = 1;
       moves = 20;
@@ -434,6 +477,7 @@
       isClearingLevel = false;
       isProcessing = false;
       bgPileLayer.innerHTML = '';
+      saveMaxLevel(level);
       initLevel();
     }
 
@@ -613,7 +657,7 @@
 
       let hasShattered = false;
 
-      // 1. デクリメント処理（その場で数値を減らす・1は消滅）
+      // 1. デクリメント処理
       cross.forEach(([tr, tc]) => {
         if (tr >= 0 && tr < grid.length && tc >= 0 && tc < COLS && grid[tr][tc] !== null) {
           const tileEl = boardEl.querySelector(`.tile[data-r="${tr}"][data-c="${tc}"]`);
@@ -647,18 +691,18 @@
 
       const waitTime = hasShattered ? 320 : 150;
 
-      // 2. 消滅アニメーション待ち後、★落ちる前★の揃いチェックを実行
+      // 2. 消滅演出待ち ➔ 落ちる前の揃いチェック
       setTimeout(() => {
         renderBoard();
 
-        // 落ちる前の揃いチェック (1回目のMatch-3)
         checkMatchesAndCascade(1, () => {
-          // 3. 落ちる前の揃いがすべて消滅・処理された後に★重力（落下）★を適用
+          // 3. 落下処理
           applyGravity(() => {
-            // 4. ★落ちた後★に再度揃いチェックを実行 (2回目以降のMatch-3・連鎖)
+            // 4. 落ちた後の揃いチェック
             checkMatchesAndCascade(1, () => {
               isProcessing = false;
               if (moves <= 0 && !isClearingLevel) {
+                saveMaxLevel(level);
                 valFinalLevel.textContent = level;
                 overlayGameOver.classList.remove('hidden');
                 overlayGameOver.classList.add('flex');
@@ -724,7 +768,6 @@
       }
     }
 
-    // 3つ以上揃っているパネルを検出して処理する関数（連鎖対応）
     function checkMatchesAndCascade(chainCount = 1, onComplete = null) {
       if (isClearingLevel) {
         if (onComplete) onComplete();
@@ -829,6 +872,7 @@
 
         level++;
         moves += 5;
+        saveMaxLevel(level);
 
         const rows = grid.length;
         for (let r = 0; r < rows; r++) {
