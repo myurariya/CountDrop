@@ -180,27 +180,69 @@
       100% { transform: scale(1); }
     }
 
-    .moves-danger {
-      color: #ef4444 !important;
-      border-color: rgba(239, 68, 68, 0.6) !important;
-      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
-      animation: dangerPulse 2s infinite;
+.moves-danger {
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.9) !important;
+  /* 発光の範囲と強度を強化 (12px -> 24px) */
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.8), inset 0 0 8px rgba(239, 68, 68, 0.4);
+  /* 周期を2sから0.8sに短縮してテンポを高速化 */
+  animation: dangerPulse 0.8s infinite cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.moves-danger #val-moves {
+  color: #ef4444 !important;
+  /* テキスト自体にもシャドウを追加して強調 */
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+}
+
+@keyframes dangerPulse {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg); 
+  }
+  20% { 
+    transform: scale(1.35) rotate(-12deg); 
+  }
+  40% { 
+    transform: scale(1.3) rotate(12deg); 
+  }
+  60% { 
+    transform: scale(1.25) rotate(-8deg); 
+  }
+  80% { 
+    transform: scale(1.15) rotate(6deg); 
+  }
+}
+
+    /* 赤い危険警告フレーム（画面外枠の赤グラデーション） */
+    .danger-border-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 45;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      box-shadow: inset 0 0 60px 20px rgba(239, 68, 68, 0.6);
     }
 
-    .moves-danger #val-moves {
-      color: #ef4444 !important;
+    .danger-border-overlay.active {
+      opacity: 1;
+      animation: dangerVignettePulse 1.5s infinite ease-in-out;
     }
 
-    @keyframes dangerPulse {
-      0%, 70%, 100% { transform: scale(1) rotate(0deg); }
-      75% { transform: scale(1.1) rotate(-4deg); }
-      80% { transform: scale(1.1) rotate(4deg); }
-      85% { transform: scale(1.1) rotate(-3deg); }
-      90% { transform: scale(1.05) rotate(2deg); }
+    @keyframes dangerVignettePulse {
+      0%, 100% {
+        box-shadow: inset 0 0 50px 15px rgba(239, 68, 68, 0.4);
+      }
+      50% {
+        box-shadow: inset 0 0 90px 30px rgba(239, 68, 68, 0.75);
+      }
     }
   </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">
+
+  <!-- 警告用フレームオーバーレイ -->
+  <div id="danger-overlay" class="danger-border-overlay"></div>
 
   <!-- TITLE SCREEN -->
   <div id="screen-title" class="flex flex-col items-center justify-center w-full max-w-sm text-center">
@@ -306,7 +348,6 @@
 
     // ----- Cookieから localStorageへ変更 -----
     function loadMaxLevel() {
-      // localStorage からデータを取得
       const saved = localStorage.getItem('countdrop_max_level');
       if (saved !== null) {
         maxLevel = parseInt(saved, 10) || 1;
@@ -319,7 +360,6 @@
     function saveMaxLevel(currentLevel) {
       if (currentLevel > maxLevel) {
         maxLevel = currentLevel;
-        // localStorage にデータを保存
         localStorage.setItem('countdrop_max_level', maxLevel);
         updateMaxLevelDisplay();
       }
@@ -425,6 +465,7 @@
     const badgeMoves = document.getElementById('badge-moves');
     const badgePanels = document.getElementById('badge-panels');
     const overlayGameOver = document.getElementById('overlay-gameover');
+    const dangerOverlay = document.getElementById('danger-overlay');
 
     document.getElementById('btn-start').addEventListener('click', () => {
       screenTitle.classList.add('hidden');
@@ -452,6 +493,7 @@
         screenGame.classList.add('hidden');
         screenGame.classList.remove('flex');
         screenTitle.classList.remove('hidden');
+        dangerOverlay.classList.remove('active');
         updateMaxLevelDisplay();
       }, 1200);
     }
@@ -467,7 +509,6 @@
     window.addEventListener('mouseup', resetHold);
     window.addEventListener('touchend', resetHold);
 
-    // 初回起動時のロード
     loadMaxLevel();
 
     function startGame() {
@@ -532,8 +573,10 @@
 
       if (moves <= 5) {
         badgeMoves.classList.add('moves-danger');
+        dangerOverlay.classList.add('active');
       } else {
         badgeMoves.classList.remove('moves-danger');
+        dangerOverlay.classList.remove('active');
       }
     }
 
@@ -657,7 +700,6 @@
 
       let hasShattered = false;
 
-      // 1. デクリメント処理
       cross.forEach(([tr, tc]) => {
         if (tr >= 0 && tr < grid.length && tc >= 0 && tc < COLS && grid[tr][tc] !== null) {
           const tileEl = boardEl.querySelector(`.tile[data-r="${tr}"][data-c="${tc}"]`);
@@ -691,14 +733,11 @@
 
       const waitTime = hasShattered ? 320 : 150;
 
-      // 2. 消滅演出待ち ➔ 落ちる前の揃いチェック
       setTimeout(() => {
         renderBoard();
 
         checkMatchesAndCascade(1, () => {
-          // 3. 落下処理
           applyGravity(() => {
-            // 4. 落ちた後の揃いチェック
             checkMatchesAndCascade(1, () => {
               isProcessing = false;
               if (moves <= 0 && !isClearingLevel) {
